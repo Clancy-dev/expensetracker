@@ -3,7 +3,7 @@
 import { db } from "@/prisma/db"
 import { revalidatePath } from "next/cache"
 
-export async function createTransaction(data: {
+export type TransactionProps = {
   userId: string
   amount: number
   description: string
@@ -11,7 +11,9 @@ export async function createTransaction(data: {
   time?: string
   type: "income" | "expense"
   categoryId: string
-}) {
+}
+
+export async function createTransaction(data: TransactionProps) {
   try {
     const transaction = await db.transaction.create({
       data: {

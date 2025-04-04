@@ -1,8 +1,6 @@
 "use client"
-
-import type React from "react"
-
 import { useState, useEffect } from "react"
+import { useForm } from "react-hook-form"
 import { CalendarIcon, Plus } from "lucide-react"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
@@ -31,23 +29,38 @@ export type TransactionModalProps = {
   userId: string
 }
 
-
+type FormValues = {
+  amount: string
+  description: string
+  categoryId: string
+  date: Date
+}
 
 export default function TransactionModal({ type, isOpen, onClose, onTransactionAdded, userId }: TransactionModalProps) {
-  const [amount, setAmount] = useState("")
-  const [description, setDescription] = useState("")
-  const [categoryId, setCategoryId] = useState("")
-  const [date, setDate] = useState<Date>(new Date())
   const [categories, setCategories] = useState<any[]>([])
   const [isAddingCategory, setIsAddingCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState("")
-  const [errors, setErrors] = useState<{
-    amount?: string
-    description?: string
-    category?: string
-    newCategory?: string
-  }>({})
+  const [newCategoryError, setNewCategoryError] = useState<string | undefined>()
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    reset,
+    watch,
+    formState: { errors },
+  } = useForm<FormValues>({
+    defaultValues: {
+      amount: "",
+      description: "",
+      categoryId: "",
+      date: new Date(),
+    },
+  })
+
+  const date = watch("date")
+  const categoryId = watch("categoryId")
 
   useEffect(() => {
     if (isOpen && userId) {
@@ -64,34 +77,12 @@ export default function TransactionModal({ type, isOpen, onClose, onTransactionA
     }
   }
 
-  const validateForm = () => {
-    const newErrors: {
-      amount?: string
-      description?: string
-      category?: string
-    } = {}
-
-    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-      newErrors.amount = "Please enter a valid amount"
-    }
-
-    if (!description.trim()) {
-      newErrors.description = "Please enter a description"
-    }
-
-    if (!categoryId && !isAddingCategory) {
-      newErrors.category = "Please select or add a category"
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
   const validateNewCategory = () => {
     if (!newCategoryName.trim()) {
-      setErrors((prev) => ({ ...prev, newCategory: "Please enter a category name" }))
+      setNewCategoryError("Please enter a category name")
       return false
     }
+    setNewCategoryError(undefined)
     return true
   }
 
@@ -111,10 +102,10 @@ export default function TransactionModal({ type, isOpen, onClose, onTransactionA
 
       if (result.data) {
         await fetchCategories()
-        setCategoryId(result.data.id)
+        setValue("categoryId", result.data.id)
         setNewCategoryName("")
         setIsAddingCategory(false)
-        setErrors((prev) => ({ ...prev, newCategory: undefined }))
+        setNewCategoryError(undefined)
       }
     } catch (error) {
       console.error("Error adding category:", error)
@@ -123,14 +114,10 @@ export default function TransactionModal({ type, isOpen, onClose, onTransactionA
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onSubmit = async (data: FormValues) => {
+    console.log(data)
+    if (!userId) return
     
-
-
-    if (!validateForm() || !userId) {
-      return
-    }
 
     setIsSubmitting(true)
 
@@ -143,10 +130,10 @@ export default function TransactionModal({ type, isOpen, onClose, onTransactionA
 
       const result = await createTransaction({
         userId,
-        amount: Number(amount),
-        description,
-        categoryId,
-        date,
+        amount: Number(data.amount),
+        description: data.description,
+        categoryId: data.categoryId,
+        date: data.date,
         time: currentTime,
         type,
       })
@@ -165,11 +152,15 @@ export default function TransactionModal({ type, isOpen, onClose, onTransactionA
   }
 
   const resetForm = () => {
-    setAmount("")
-    setDescription("")
-    setCategoryId("")
-    setDate(new Date())
-    setErrors({})
+    reset({
+      amount: "",
+      description: "",
+      categoryId: "",
+      date: new Date(),
+    })
+    setNewCategoryName("")
+    setIsAddingCategory(false)
+    setNewCategoryError(undefined)
   }
 
   const handleClose = () => {
@@ -187,7 +178,7 @@ export default function TransactionModal({ type, isOpen, onClose, onTransactionA
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label htmlFor="amount">Amount (UGX)</Label>
             <div className="relative">
@@ -196,14 +187,17 @@ export default function TransactionModal({ type, isOpen, onClose, onTransactionA
                 type="number"
                 placeholder="0"
                 className={cn(errors.amount && "border-red-500")}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
                 step="1"
                 min="1"
                 disabled={isSubmitting}
+                {...register("amount", {
+                  required: "Please enter a valid amount",
+                  min: { value: 1, message: "Amount must be greater than 0" },
+                  valueAsNumber: true,
+                })}
               />
             </div>
-            {errors.amount && <p className="text-sm text-red-500">{errors.amount}</p>}
+            {errors.amount && <p className="text-sm text-red-500">{errors.amount.message}</p>}
           </div>
 
           <div className="space-y-2">
@@ -212,11 +206,12 @@ export default function TransactionModal({ type, isOpen, onClose, onTransactionA
               id="description"
               placeholder="Enter description"
               className={cn(errors.description && "border-red-500")}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
               disabled={isSubmitting}
+              {...register("description", {
+                required: "Please enter a description",
+              })}
             />
-            {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
+            {errors.description && <p className="text-sm text-red-500">{errors.description.message}</p>}
           </div>
 
           <div className="space-y-2">
@@ -241,10 +236,10 @@ export default function TransactionModal({ type, isOpen, onClose, onTransactionA
                     placeholder="New category name"
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
-                    className={cn(errors.newCategory && "border-red-500")}
+                    className={cn(newCategoryError && "border-red-500")}
                     disabled={isSubmitting}
                   />
-                  {errors.newCategory && <p className="text-sm text-red-500">{errors.newCategory}</p>}
+                  {newCategoryError && <p className="text-sm text-red-500">{newCategoryError}</p>}
                 </div>
                 <Button type="button" size="icon" onClick={handleAddCategory} disabled={isSubmitting}>
                   <Plus className="h-4 w-4" />
@@ -252,8 +247,12 @@ export default function TransactionModal({ type, isOpen, onClose, onTransactionA
               </div>
             ) : (
               <>
-                <Select value={categoryId} onValueChange={setCategoryId} disabled={isSubmitting}>
-                  <SelectTrigger id="category" className={cn(errors.category && "border-red-500")}>
+                <Select
+                  value={categoryId}
+                  onValueChange={(value) => setValue("categoryId", value, { shouldValidate: true })}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger id="category" className={cn(errors.categoryId && "border-red-500")}>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -264,7 +263,13 @@ export default function TransactionModal({ type, isOpen, onClose, onTransactionA
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.category && <p className="text-sm text-red-500">{errors.category}</p>}
+                {errors.categoryId && <p className="text-sm text-red-500">{errors.categoryId.message}</p>}
+                <input
+                  type="hidden"
+                  {...register("categoryId", {
+                    required: "Please select or add a category",
+                  })}
+                />
               </>
             )}
           </div>
@@ -274,6 +279,7 @@ export default function TransactionModal({ type, isOpen, onClose, onTransactionA
             <Popover>
               <PopoverTrigger asChild>
                 <Button
+                  type="button"
                   variant="outline"
                   className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
                   disabled={isSubmitting}
@@ -286,11 +292,12 @@ export default function TransactionModal({ type, isOpen, onClose, onTransactionA
                 <Calendar
                   mode="single"
                   selected={date}
-                  onSelect={(newDate) => setDate(newDate || new Date())}
+                  onSelect={(newDate) => setValue("date", newDate || new Date())}
                   initialFocus
                 />
               </PopoverContent>
             </Popover>
+            <input type="hidden" {...register("date")} />
           </div>
 
           <DialogFooter>
