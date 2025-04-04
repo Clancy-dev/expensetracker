@@ -12,9 +12,12 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { addTransaction, getCategoriesByType } from "@/lib/storage"
 import type { Transaction, Category } from "@/lib/types"
+
+type TransactionType = "income" | "expense"
 import { cn } from "@/lib/utils"
+import { getCategoriesByUserId } from "@/actions/category-actions"
+import { useEffect } from "react"
 
 interface AddTransactionFormProps {
   type: "income" | "expense"
@@ -22,12 +25,30 @@ interface AddTransactionFormProps {
   onCancel: () => void
 }
 
-export function AddTransactionForm({ type, onTransactionAdded, onCancel }: AddTransactionFormProps) {
+export default function AddTransactionForm({ type, onTransactionAdded, onCancel }: AddTransactionFormProps) {
   const [amount, setAmount] = useState("")
   const [description, setDescription] = useState("")
   const [category, setCategory] = useState("")
   const [date, setDate] = useState<Date>(new Date())
-  const [categories, setCategories] = useState<Category[]>(() => getCategoriesByType(type))
+  const [categories, setCategories] = useState<Category[]>([])
+  
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const result = await getCategoriesByUserId(type)
+      if ('data' in result && result.data) {
+        setCategories(
+          result.data.map((cat) => ({
+            ...cat,
+            type: cat.type as TransactionType,
+          }))
+        )
+      } else {
+        console.error(result.error)
+      }
+    }
+  
+    fetchCategories()
+  }, [type])
   const [errors, setErrors] = useState<{
     amount?: string
     description?: string
@@ -80,7 +101,8 @@ export function AddTransactionForm({ type, onTransactionAdded, onCancel }: AddTr
       time: currentTime,
     }
 
-    addTransaction(newTransaction)
+     // Replace this with your actual implementation of addTransaction
+     console.log("Transaction added:", newTransaction)
     onTransactionAdded()
   }
 
@@ -165,4 +187,5 @@ export function AddTransactionForm({ type, onTransactionAdded, onCancel }: AddTr
     </form>
   )
 }
+
 

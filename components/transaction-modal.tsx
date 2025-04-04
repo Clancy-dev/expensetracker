@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils"
 import { createTransaction } from "@/actions/transaction-actions"
 import { createCategory, getCategoriesByType, getRandomColor } from "@/actions/category-actions"
 
-interface TransactionModalProps {
+export type TransactionModalProps = {
   type: "income" | "expense"
   isOpen: boolean
   onClose: () => void
@@ -31,7 +31,9 @@ interface TransactionModalProps {
   userId: string
 }
 
-export function TransactionModal({ type, isOpen, onClose, onTransactionAdded, userId }: TransactionModalProps) {
+
+
+export default function TransactionModal({ type, isOpen, onClose, onTransactionAdded, userId }: TransactionModalProps) {
   const [amount, setAmount] = useState("")
   const [description, setDescription] = useState("")
   const [categoryId, setCategoryId] = useState("")
@@ -123,6 +125,8 @@ export function TransactionModal({ type, isOpen, onClose, onTransactionAdded, us
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+
 
     if (!validateForm() || !userId) {
       return

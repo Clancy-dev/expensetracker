@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
 import { TransactionList } from "@/components/transaction-list"
-import { TransactionModal } from "@/components/transaction-modal"
 import { OverviewChart } from "@/components/overview-chart"
 import { Greeting } from "@/components/greeting"
 import { getCurrentUser } from "@/lib/auth-client"
@@ -16,6 +15,7 @@ import {
   getTotalExpenses,
   getMonthlyData,
 } from "@/actions/transaction-actions"
+import TransactionModal from "./transaction-modal"
 
 export function Dashboard() {
   const [transactions, setTransactions] = useState<any[]>([])

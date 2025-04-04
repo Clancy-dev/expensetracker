@@ -3,18 +3,11 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  initializeStorage,
-  getTotalIncome,
-  getTotalExpenses,
-  getBalance,
-  getTransactionsByCategory,
-  getMonthlyData,
-} from "@/lib/storage"
 import { formatCurrency } from "@/lib/utils"
 import { OverviewChart } from "@/components/overview-chart"
 import { CategoryChart } from "@/components/category-chart"
 import { MonthlyComparisonChart } from "@/components/monthly-comparison-chart"
+import { getMonthlyData, getTotalExpenses, getTotalIncome, getTransactionsByCategory} from "@/actions/transaction-actions"
 
 export function Reports() {
   const [totalIncome, setTotalIncome] = useState(0)
@@ -26,18 +19,60 @@ export function Reports() {
   const [monthlyExpenses, setMonthlyExpenses] = useState<{ name: string; amount: number }[]>([])
 
   useEffect(() => {
-    initializeStorage()
+    // initializeStorage()
     updateData()
   }, [])
 
   const updateData = () => {
-    setTotalIncome(getTotalIncome())
-    setTotalExpenses(getTotalExpenses())
-    setBalance(getBalance())
-    setIncomeByCategory(getTransactionsByCategory("income"))
-    setExpensesByCategory(getTransactionsByCategory("expense"))
-    setMonthlyIncome(getMonthlyData("income"))
-    setMonthlyExpenses(getMonthlyData("expense"))
+    getTotalIncome("user-id").then((result) => {
+      if (result.data !== undefined) {
+        setTotalIncome(result.data)
+      } else {
+        console.error(result.error)
+      }
+    })
+    getTotalExpenses("user-id").then((result) => {
+      if (result.data !== undefined) {
+        setTotalExpenses(result.data)
+      } else {
+        console.error(result.error)
+      }
+    })
+    getTotalIncome("user-id").then((result) => {
+      if (result.data !== undefined) {
+        setBalance(result.data)
+      } else {
+        console.error(result.error)
+      }
+    })
+    getTransactionsByCategory("user-id", "income").then((result) => {
+      if (result.data !== undefined) {
+        setIncomeByCategory(result.data)
+      } else {
+        console.error(result.error)
+      }
+    })
+    getTransactionsByCategory("user-id", "expense").then((result) => {
+      if (result.data !== undefined) {
+        setExpensesByCategory(result.data)
+      } else {
+        console.error(result.error)
+      }
+    })
+    getMonthlyData("user-id", "income").then((result) => {
+      if (result.data !== undefined) {
+        setMonthlyIncome(result.data)
+      } else {
+        console.error(result.error)
+      }
+    })
+    getMonthlyData("user-id", "expense").then((result) => {
+      if (result.data !== undefined) {
+        setMonthlyExpenses(result.data)
+      } else {
+        console.error(result.error)
+      }
+    })
   }
 
   return (

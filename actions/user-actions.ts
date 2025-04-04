@@ -8,7 +8,6 @@ export async function createUser(data: {
   email: string
   password: string
   fullName: string
-  // test
 }) {
   try {
     // Check if user already exists

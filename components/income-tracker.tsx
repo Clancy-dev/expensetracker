@@ -4,12 +4,12 @@ import { useEffect, useState } from "react"
 import { ArrowUpIcon } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { initializeStorage, getTransactionsByType, getTotalIncome, getTransactionsByCategory } from "@/lib/storage"
 import type { Transaction } from "@/lib/types"
 import { formatCurrency } from "@/lib/utils"
 import { TransactionList } from "@/components/transaction-list"
-import { TransactionModal } from "@/components/transaction-modal"
 import { CategoryChart } from "@/components/category-chart"
+import { getTotalIncome, getTransactionsByUserId } from "@/actions/transaction-actions"
+import TransactionModal from "./transaction-modal"
 
 export function IncomeTracker() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -18,15 +18,44 @@ export function IncomeTracker() {
   const [categoryData, setCategoryData] = useState<{ name: string; value: number; color: string }[]>([])
 
   useEffect(() => {
-    initializeStorage()
+    // initializeStorage()
     updateData()
   }, [])
 
   const updateData = () => {
-    const incomeTransactions = getTransactionsByType("income")
-    setTransactions(incomeTransactions)
-    setTotalIncome(getTotalIncome())
-    setCategoryData(getTransactionsByCategory("income"))
+    getTransactionsByUserId("income").then((response) => {
+          if (response.data) {
+            setTransactions(response.data.map((transaction: any) => ({
+              ...transaction,
+              type: transaction.type as Transaction["type"], // Ensure type matches TransactionType
+            })))
+          } else {
+            // console.error(response.error)
+            return Error
+
+          }
+        })
+    getTotalIncome("income").then((result) => {
+      if (result.data !== undefined) {
+        setTotalIncome(result.data)
+      } else {
+        // console.error(result.error)
+        return Error
+      }
+    })
+    setCategoryData(
+      transactions
+        .filter((transaction) => transaction.type === "income")
+        .reduce((acc, transaction) => {
+          const category = acc.find((cat) => cat.name === transaction.category);
+          if (category) {
+            category.value += transaction.amount;
+          } else {
+            acc.push({ name: transaction.category, value: transaction.amount, color: "#"+((1<<24)*Math.random()|0).toString(16) });
+          }
+          return acc;
+        }, [] as { name: string; value: number; color: string }[])
+    )
   }
 
   const handleAddTransaction = () => {
@@ -118,6 +147,7 @@ export function IncomeTracker() {
         isOpen={isAddingTransaction}
         onClose={() => setIsAddingTransaction(false)}
         onTransactionAdded={handleTransactionAdded}
+        userId="income"
       />
     </div>
   )

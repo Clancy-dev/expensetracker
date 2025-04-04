@@ -4,12 +4,12 @@ import { useEffect, useState } from "react"
 import { ArrowDownIcon } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { initializeStorage, getTransactionsByType, getTotalExpenses, getTransactionsByCategory } from "@/lib/storage"
 import type { Transaction } from "@/lib/types"
 import { formatCurrency } from "@/lib/utils"
 import { TransactionList } from "@/components/transaction-list"
-import { TransactionModal } from "@/components/transaction-modal"
 import { CategoryChart } from "@/components/category-chart"
+import { getTotalExpenses, getTransactionsByType, getTransactionsByUserId } from "@/actions/transaction-actions"
+import TransactionModal from "./transaction-modal"
 
 export function ExpenseTracker() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -18,15 +18,44 @@ export function ExpenseTracker() {
   const [categoryData, setCategoryData] = useState<{ name: string; value: number; color: string }[]>([])
 
   useEffect(() => {
-    initializeStorage()
     updateData()
   }, [])
 
   const updateData = () => {
-    const expenseTransactions = getTransactionsByType("expense")
-    setTransactions(expenseTransactions)
-    setTotalExpenses(getTotalExpenses())
-    setCategoryData(getTransactionsByCategory("expense"))
+    const expenseTransactions = getTransactionsByUserId("expense")
+    expenseTransactions.then((response) => {
+      if (response.data) {
+        setTransactions(response.data.map((transaction: any) => ({
+          ...transaction,
+          type: transaction.type as Transaction["type"], // Ensure type matches TransactionType
+        })))
+      } else {
+        console.error("Error fetching transactions:", response.error)
+      }
+    }).catch((error) => {
+      console.error("Unexpected error fetching transactions:", error)
+    })
+    getTotalExpenses("user-id").then((response) => {
+      if (response.data !== undefined) {
+        setTotalExpenses(response.data)
+      } else {
+        console.error("Error fetching total expenses:", response.error)
+      }
+    }).catch((error) => {
+      console.error("Unexpected error fetching total expenses:", error)
+    })
+    getTransactionsByUserId("expense").then((response) => {
+      if (response.data) {
+        const formattedData = response.data.map((transaction) => ({
+          name: transaction.category.name,
+          value: transaction.amount,
+          color: transaction.category.color,
+        }))
+        setCategoryData(formattedData)
+      }
+    }).catch((error) => {
+      console.error("Error fetching category data:", error)
+    })
   }
 
   const handleAddTransaction = () => {
@@ -118,6 +147,7 @@ export function ExpenseTracker() {
         isOpen={isAddingTransaction}
         onClose={() => setIsAddingTransaction(false)}
         onTransactionAdded={handleTransactionAdded}
+        userId="user-id" // Replace "user-id" with the actual user ID if available
       />
     </div>
   )
